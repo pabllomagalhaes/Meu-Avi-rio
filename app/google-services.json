@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "78955678430",
+    "project_id": "meu-aviario-2836c",
+    "storage_bucket": "meu-aviario-2836c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:78955678430:android:e136abbfeb5163ece3504f",
+        "android_client_info": {
+          "package_name": "com.example.meuaviario"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJFGonWb2AhV1FZrxHUUg_w6PWmuBssI8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
