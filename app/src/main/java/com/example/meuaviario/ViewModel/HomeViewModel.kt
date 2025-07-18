@@ -66,4 +66,14 @@ class HomeViewModel : ViewModel() {
                 Log.e("HomeViewModel", "Falha ao atualizar os ovos.", e)
             }
     }
+    fun updateActiveHens(henCount: Int) {
+        val userId = auth.currentUser?.uid ?: return
+        val dataToUpdate = mapOf("activeHens" to henCount)
+        firestore.collection("users").document(userId)
+            .collection("aviary").document("summary")
+            .set(dataToUpdate, SetOptions.merge())
+            .addOnFailureListener { e ->
+                Log.e("HomeViewModel", "Falha ao atualizar as galinhas.", e)
+            }
+    }
 }
