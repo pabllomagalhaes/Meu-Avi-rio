@@ -18,29 +18,32 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import com.example.meuaviario.ui.theme.MeuAviarioTheme
 import java.text.DecimalFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(homeViewModel: HomeViewModel = viewModel()) {
+// A assinatura da função agora inclui o NavController
+fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = viewModel()) {
     var showEggDialog by remember { mutableStateOf(false) }
     var showHenDialog by remember { mutableStateOf(false) }
     var showFeedDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
 
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Meu Aviário") })
         },
-        // --- NOVA BARRA INFERIOR ---
         bottomBar = {
             BottomAppBar(
                 actions = {
                     IconButton(onClick = {
-                        // Ação futura: navegar para a tela de despesas
-                        Toast.makeText(context, "Em breve: Adicionar Despesa", Toast.LENGTH_SHORT).show()
+                        // Ação para navegar para a nova tela
+                        navController.navigate("expense")
                     }) {
                         Icon(Icons.Filled.ShoppingCart, contentDescription = "Adicionar Despesa")
                     }
@@ -98,6 +101,8 @@ fun HomeScreen(homeViewModel: HomeViewModel = viewModel()) {
         }
     )
 }
+
+// O restante do arquivo (diálogos, HomeContent, etc.) permanece o mesmo...
 
 @Composable
 fun FeedConsumptionDialog(onDismiss: () -> Unit, onConfirm: (Double) -> Unit) {
@@ -224,7 +229,7 @@ fun HomeContent(
     paddingValues: PaddingValues,
     summary: AviarySummary?,
     weeklyProduction: List<Int>,
-    feedConversionRatio: Double?, // Recebe o novo dado
+    feedConversionRatio: Double?,
     onHenCardClick: () -> Unit,
     onFeedCardClick: () -> Unit
 ) {
@@ -242,7 +247,6 @@ fun HomeContent(
                 CircularProgressIndicator()
             }
         } else {
-            // --- NOVO CARD: CONVERSÃO ALIMENTAR ---
             if (feedConversionRatio != null) {
                 Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                     Row(modifier = Modifier.padding(16.dp)) {
@@ -253,7 +257,6 @@ fun HomeContent(
                     }
                 }
             }
-            // --- FIM DO NOVO CARD ---
 
             Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                 Row(modifier = Modifier.padding(16.dp)) {
@@ -355,5 +358,14 @@ fun ProductionChart(modifier: Modifier = Modifier, data: List<Int>) {
             color = primaryColor,
             style = Stroke(width = 5f)
         )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun HomeScreenPreview() {
+    MeuAviarioTheme {
+        // Adicionamos um NavController "falso" para o preview funcionar
+        HomeScreen(navController = rememberNavController())
     }
 }

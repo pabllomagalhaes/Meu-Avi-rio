@@ -32,22 +32,25 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.meuaviario.ui.theme.MeuAviarioTheme
 
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MeuAviarioTheme {
-                // O NavController é o cérebro da navegação
                 val navController = rememberNavController()
 
-                // NavHost é o container que exibirá a tela correta
                 NavHost(navController = navController, startDestination = "login") {
                     composable("login") {
-                        // Passamos o navController para a LoginScreen
                         LoginScreen(navController = navController)
                     }
                     composable("home") {
-                        HomeScreen()
+                        // Passamos o NavController para a HomeScreen
+                        HomeScreen(navController = navController)
+                    }
+                    // --- NOVA ROTA ---
+                    composable("expense") {
+                        ExpenseScreen(navController = navController)
                     }
                 }
             }
@@ -112,14 +115,5 @@ fun LoginScreen(
         }) {
             Text("Registrar")
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun LoginScreenPreview() {
-    MeuAviarioTheme {
-        val navController = rememberNavController()
-        LoginScreen(navController = navController)
     }
 }
