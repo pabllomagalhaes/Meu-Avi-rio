@@ -1,40 +1,97 @@
-package com.example.meuaviario.Screen
+package com.example.meuaviario
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.meuaviario.AviarySummary // Adicionado import para resolver o erro
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(homeViewModel: HomeViewModel = viewModel()) {
+    // Variável para controlar a visibilidade do pop-up
+    var showDialog by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Meu Aviário") }
-            )
+            TopAppBar(title = { Text("Meu Aviário") })
+        },
+        // Adicionando o botão flutuante
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showDialog = true }) {
+                Icon(Icons.Default.Add, contentDescription = "Registrar Coleta")
+            }
         },
         content = { paddingValues ->
-            HomeContent(paddingValues = paddingValues)
+            HomeContent(
+                paddingValues = paddingValues,
+                summary = homeViewModel.summary
+            )
+
+            // Se showDialog for true, o pop-up será exibido
+            if (showDialog) {
+                EggCollectionDialog(
+                    onDismiss = { showDialog = false },
+                    onConfirm = { count ->
+                        homeViewModel.updateEggsToday(count)
+                        showDialog = false
+                    }
+                )
+            }
         }
     )
 }
 
 @Composable
-fun HomeContent(paddingValues: PaddingValues) {
+fun EggCollectionDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
+    var eggCountInput by remember { mutableStateOf("") }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Registrar Coleta de Ovos") },
+        text = {
+            OutlinedTextField(
+                value = eggCountInput,
+                onValueChange = { eggCountInput = it.filter { char -> char.isDigit() } },
+                label = { Text("Quantidade de ovos") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val count = eggCountInput.toIntOrNull()
+                    if (count != null) {
+                        onConfirm(count)
+                    } else {
+                        // Opcional: Mostrar um aviso se o campo estiver vazio
+                        android.widget.Toast.makeText(context, "Por favor, insira um número.", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            ) {
+                Text("Confirmar")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+
+@Composable
+fun HomeContent(paddingValues: PaddingValues, summary: AviarySummary?) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -44,31 +101,34 @@ fun HomeContent(paddingValues: PaddingValues) {
         Text("Resumo do Aviário", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
-        Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-            Row(modifier = Modifier.padding(16.dp)) {
-                Text("Galinhas Ativas:", style = MaterialTheme.typography.bodyLarge)
-                Spacer(modifier = Modifier.weight(1f))
-                Text("50", style = MaterialTheme.typography.bodyLarge) // Simulação de dados
+        if (summary == null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                Row(modifier = Modifier.padding(16.dp)) {
+                    Text("Galinhas Ativas:", style = MaterialTheme.typography.bodyLarge)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text("${summary.activeHens}", style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+
+            Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                Row(modifier = Modifier.padding(16.dp)) {
+                    Text("Ovos Coletados Hoje:", style = MaterialTheme.typography.bodyLarge)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text("${summary.eggsToday}", style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Row(modifier = Modifier.padding(16.dp)) {
+                    Text("Produção Total (Últimos 7 dias):", style = MaterialTheme.typography.bodyLarge)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text("${summary.totalEggsLast7Days}", style = MaterialTheme.typography.bodyLarge)
+                }
             }
         }
-
-        Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-            Row(modifier = Modifier.padding(16.dp)) {
-                Text("Ovos Coletados Hoje:", style = MaterialTheme.typography.bodyLarge)
-                Spacer(modifier = Modifier.weight(1f))
-                Text("45", style = MaterialTheme.typography.bodyLarge) // Simulação de dados
-            }
-        }
-
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Row(modifier = Modifier.padding(16.dp)) {
-                Text("Produção Total (Últimos 7 dias):", style = MaterialTheme.typography.bodyLarge)
-                Spacer(modifier = Modifier.weight(1f))
-                Text("300", style = MaterialTheme.typography.bodyLarge) // Simulação de dados
-            }
-        }
-
-        // Podemos adicionar mais informações aqui no futuro
     }
-
 }
