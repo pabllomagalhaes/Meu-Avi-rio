@@ -28,6 +28,9 @@ class HomeViewModel : ViewModel() {
         private set
     var monthlySales by mutableStateOf<Double?>(null)
         private set
+    // Novo estado para os alertas
+    var alerts by mutableStateOf<List<String>>(emptyList())
+        private set
 
     private val firestore = Firebase.firestore
     private val auth = Firebase.auth
@@ -37,24 +40,16 @@ class HomeViewModel : ViewModel() {
         fetchWeeklyData()
         listenForMonthlyExpenses()
         listenForMonthlySales()
-        listenForBatchUpdatesAndSyncHenCount() // Nova função de escuta para lotes
+        listenForBatchUpdatesAndSyncHenCount()
     }
 
-    // --- NOVA FUNÇÃO DE INTEGRAÇÃO ---
     private fun listenForBatchUpdatesAndSyncHenCount() {
         val userId = auth.currentUser?.uid ?: return
-
         firestore.collection("users").document(userId)
             .collection("batches")
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    Log.e("HomeViewModel", "Erro ao escutar lotes.", error)
-                    return@addSnapshotListener
-                }
+            .addSnapshotListener { snapshot, _ ->
                 if (snapshot != null) {
-                    // Soma o número de galinhas de todos os lotes
                     val totalHens = snapshot.documents.sumOf { it.getLong("numberOfHens")?.toInt() ?: 0 }
-                    // Atualiza o campo 'activeHens' no documento de resumo
                     updateActiveHens(totalHens)
                 }
             }
@@ -91,13 +86,30 @@ class HomeViewModel : ViewModel() {
                 } else {
                     feedConversionRatio = 0.0
                 }
+
+                // --- LÓGICA DE ANÁLISE DE ALERTAS ---
+                checkForProductionDrop(weeklyProduction)
             }
+    }
+
+    // --- NOVA FUNÇÃO DE ANÁLISE ---
+    private fun checkForProductionDrop(dailyEggCounts: List<Int>) {
+        val newAlerts = mutableListOf<String>()
+        if (dailyEggCounts.size >= 3) { // Analisa se tivermos pelo menos 3 dias de dados
+            val averageOfFirstDays = dailyEggCounts.dropLast(1).average()
+            val lastDayProduction = dailyEggCounts.last().toDouble()
+
+            // Alerta se a produção cair mais de 15%
+            if (lastDayProduction < averageOfFirstDays * 0.85) {
+                newAlerts.add("Queda na produção detetada. Verifique o bem-estar das aves.")
+            }
+        }
+        alerts = newAlerts
     }
 
     private fun listenForMonthlyExpenses() {
         val userId = auth.currentUser?.uid ?: return
         val (startOfMonth, startOfNextMonth) = getMonthDateRange()
-
         firestore.collection("users").document(userId)
             .collection("expenses")
             .whereGreaterThanOrEqualTo("timestamp", startOfMonth)
@@ -112,7 +124,6 @@ class HomeViewModel : ViewModel() {
     private fun listenForMonthlySales() {
         val userId = auth.currentUser?.uid ?: return
         val (startOfMonth, startOfNextMonth) = getMonthDateRange()
-
         firestore.collection("users").document(userId)
             .collection("sales")
             .whereGreaterThanOrEqualTo("timestamp", startOfMonth)
@@ -126,10 +137,7 @@ class HomeViewModel : ViewModel() {
 
     private fun getMonthDateRange(): Pair<Date, Date> {
         val calendar = Calendar.getInstance()
-        calendar.set(Calendar.DAY_OF_MONTH, 1)
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.DAY_OF_MONTH, 1); calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0)
         val startOfMonth = calendar.time
         calendar.add(Calendar.MONTH, 1)
         val startOfNextMonth = calendar.time
@@ -149,8 +157,7 @@ class HomeViewModel : ViewModel() {
         }.commit().addOnSuccessListener { fetchWeeklyData() }
     }
 
-    // A função agora é privada, pois é controlada automaticamente
-    fun updateActiveHens(henCount: Int) {
+    private fun updateActiveHens(henCount: Int) {
         val userId = auth.currentUser?.uid ?: return
         val dataToUpdate = mapOf("activeHens" to henCount)
         firestore.collection("users").document(userId)

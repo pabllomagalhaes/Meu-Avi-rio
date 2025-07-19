@@ -2,18 +2,49 @@ package com.example.meuaviario
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.BottomAppBarDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -23,9 +54,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import com.example.meuaviario.ui.theme.MeuAviarioTheme
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.Locale
@@ -34,7 +68,6 @@ import java.util.Locale
 @Composable
 fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = viewModel()) {
     var showEggDialog by remember { mutableStateOf(false) }
-    var showHenDialog by remember { mutableStateOf(false) }
     var showFeedDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -42,18 +75,17 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
         bottomBar = {
             BottomAppBar(
                 actions = {
-                    IconButton(onClick = { navController.navigate("expense") }) {
-                        Icon(Icons.Filled.ShoppingCart, contentDescription = "Adicionar Despesa")
+                    IconButton(onClick = { /* Faz nada */ }, enabled = false) {
+                        Icon(Icons.Filled.Star, contentDescription = "Painel de Controle", tint = MaterialTheme.colorScheme.primary)
+                    }
+                    IconButton(onClick = { navController.navigate("batch") }) {
+                        Icon(Icons.Filled.Home, contentDescription = "Gestão de Lotes", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     IconButton(onClick = { navController.navigate("expense_history") }) {
-                        Icon(Icons.Filled.List, contentDescription = "Histórico de Despesas")
+                        Icon(Icons.Filled.List, contentDescription = "Histórico de Despesas", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    IconButton(onClick = { navController.navigate("sale") }) {
-                        Icon(Icons.Filled.Star, contentDescription = "Registar Venda")
-                    }
-                    // --- NOVO BOTÃO DE GESTÃO DE LOTES ---
-                    IconButton(onClick = { navController.navigate("batch") }) {
-                        Icon(Icons.Filled.Home, contentDescription = "Gestão de Lotes")
+                    IconButton(onClick = { navController.navigate("sale_history") }) {
+                        Icon(Icons.Filled.Menu, contentDescription = "Histórico de Vendas", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
                 floatingActionButton = {
@@ -75,12 +107,11 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
                 feedConversionRatio = homeViewModel.feedConversionRatio,
                 monthlyExpenses = homeViewModel.monthlyExpenses,
                 monthlySales = homeViewModel.monthlySales,
-                onHenCardClick = { showHenDialog = true },
+                alerts = homeViewModel.alerts,
                 onFeedCardClick = { showFeedDialog = true }
             )
 
             if (showEggDialog) { EggCollectionDialog(onDismiss = { showEggDialog = false }, onConfirm = { homeViewModel.updateEggsToday(it); showEggDialog = false }) }
-            if (showHenDialog) { HenCountDialog(onDismiss = { showHenDialog = false }, onConfirm = { homeViewModel.updateActiveHens(it); showHenDialog = false }) }
             if (showFeedDialog) { FeedConsumptionDialog(onDismiss = { showFeedDialog = false }, onConfirm = { homeViewModel.updateFeedConsumption(it); showFeedDialog = false }) }
         }
     )
@@ -94,7 +125,7 @@ fun HomeContent(
     feedConversionRatio: Double?,
     monthlyExpenses: Double?,
     monthlySales: Double?,
-    onHenCardClick: () -> Unit,
+    alerts: List<String>,
     onFeedCardClick: () -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -108,7 +139,7 @@ fun HomeContent(
             .verticalScroll(scrollState)
     ) {
         Spacer(modifier = Modifier.height(16.dp))
-        Text("Painel de Controle", style = MaterialTheme.typography.headlineSmall)
+        Text("Painel de Controle", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
 
         if (summary == null) {
@@ -116,84 +147,64 @@ fun HomeContent(
                 CircularProgressIndicator()
             }
         } else {
+            if (alerts.isNotEmpty()) {
+                AlertCard(alerts = alerts)
+            }
+
             val netProfit = if (monthlySales != null && monthlyExpenses != null) monthlySales - monthlyExpenses else null
             if (netProfit != null) {
-                val profitColor = if (netProfit >= 0) Color(0xFF006400) else Color.Red // Verde escuro
-                Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                    Row(modifier = Modifier.padding(16.dp)) {
-                        Text("Lucro Líquido (Mês):", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(currencyFormat.format(netProfit), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = profitColor)
+                val profitColor = if (netProfit >= 0) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Lucro Líquido (Mês):", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            currencyFormat.format(netProfit),
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = profitColor
+                        )
                     }
                 }
             }
 
-            if (monthlySales != null) {
-                Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                    Row(modifier = Modifier.padding(16.dp)) {
-                        Text("Total Vendas (Mês):", style = MaterialTheme.typography.bodyLarge)
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(currencyFormat.format(monthlySales), style = MaterialTheme.typography.bodyLarge)
-                    }
-                }
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                InfoCard(title = "Vendas (Mês)", value = currencyFormat.format(monthlySales ?: 0.0), modifier = Modifier.weight(1f))
+                InfoCard(title = "Despesas (Mês)", value = currencyFormat.format(monthlyExpenses ?: 0.0), modifier = Modifier.weight(1f))
             }
 
-            if (monthlyExpenses != null) {
-                Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                    Row(modifier = Modifier.padding(16.dp)) {
-                        Text("Total Despesas (Mês):", style = MaterialTheme.typography.bodyLarge)
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(currencyFormat.format(monthlyExpenses), style = MaterialTheme.typography.bodyLarge)
-                    }
-                }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Métricas de Produção", style = MaterialTheme.typography.headlineSmall)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                val postureRate = if (summary.activeHens > 0) (summary.eggsToday.toDouble() / summary.activeHens) * 100 else 0.0
+                InfoCard(title = "Taxa de Postura", value = "${DecimalFormat("0.0").format(postureRate)} %", modifier = Modifier.weight(1f))
+                InfoCard(title = "Conversão Alimentar", value = "${DecimalFormat("0.00").format(feedConversionRatio ?: 0.0)} kg/dúzia", modifier = Modifier.weight(1f))
             }
 
-            if (feedConversionRatio != null) {
-                Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                    Row(modifier = Modifier.padding(16.dp)) {
-                        Text("Conversão Alimentar:", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.weight(1f))
-                        val formattedFCR = DecimalFormat("0.00").format(feedConversionRatio)
-                        Text("$formattedFCR kg/dúzia", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                    }
-                }
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(top = 16.dp)) {
+                InfoCard(title = "Galinhas Ativas", value = summary.activeHens.toString(), modifier = Modifier.weight(1f))
+                InfoCard(title = "Ovos Hoje", value = summary.eggsToday.toString(), modifier = Modifier.weight(1f))
             }
 
-            Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                Row(modifier = Modifier.padding(16.dp)) {
-                    Text("Taxa de Postura:", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.weight(1f))
-                    val postureRate = if (summary.activeHens > 0) (summary.eggsToday.toDouble() / summary.activeHens) * 100 else 0.0
-                    val formattedRate = DecimalFormat("0.0").format(postureRate)
-                    Text("$formattedRate %", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                }
-            }
-
-            Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).clickable(onClick = onHenCardClick)) {
-                Row(modifier = Modifier.padding(16.dp)) {
-                    Text("Galinhas Ativas:", style = MaterialTheme.typography.bodyLarge)
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text("${summary.activeHens}", style = MaterialTheme.typography.bodyLarge)
-                }
-            }
-
-            Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                Row(modifier = Modifier.padding(16.dp)) {
-                    Text("Ovos Coletados Hoje:", style = MaterialTheme.typography.bodyLarge)
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text("${summary.eggsToday}", style = MaterialTheme.typography.bodyLarge)
-                }
-            }
-
-            Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).clickable(onClick = onFeedCardClick)) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
+                    .clickable(onClick = onFeedCardClick)
+            ) {
                 Row(modifier = Modifier.padding(16.dp)) {
                     Text("Ração Consumida Hoje:", style = MaterialTheme.typography.bodyLarge)
                     Spacer(modifier = Modifier.weight(1f))
-                    Text("${summary.feedConsumedToday} kg", style = MaterialTheme.typography.bodyLarge)
+                    Text("${summary.feedConsumedToday} kg", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                 }
             }
 
-            Card(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+            Card(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Produção (Últimos 7 dias)", style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.height(16.dp))
@@ -206,13 +217,53 @@ fun HomeContent(
     }
 }
 
-// --- FUNÇÕES DE DIÁLOGO E GRÁFICO ADICIONADAS ---
+@Composable
+fun AlertCard(alerts: List<String>) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.Warning,
+                contentDescription = "Alerta",
+                tint = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Column {
+                alerts.forEach { alert ->
+                    Text(
+                        text = alert,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InfoCard(title: String, value: String, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier,
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        }
+    }
+}
 
 @Composable
 fun EggCollectionDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
     var eggCountInput by remember { mutableStateOf("") }
     val context = LocalContext.current
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Registar Coleta de Ovos") },
@@ -226,63 +277,13 @@ fun EggCollectionDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
             )
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    val count = eggCountInput.toIntOrNull()
-                    if (count != null) {
-                        onConfirm(count)
-                    } else {
-                        android.widget.Toast.makeText(context, "Por favor, insira um número.", android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                }
-            ) {
-                Text("Confirmar")
-            }
+            Button(onClick = {
+                val count = eggCountInput.toIntOrNull()
+                if (count != null) onConfirm(count)
+                else android.widget.Toast.makeText(context, "Por favor, insira um número.", android.widget.Toast.LENGTH_SHORT).show()
+            }) { Text("Confirmar") }
         },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
-    )
-}
-
-@Composable
-fun HenCountDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
-    var henCountInput by remember { mutableStateOf("") }
-    val context = LocalContext.current
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Atualizar Galinhas Ativas") },
-        text = {
-            OutlinedTextField(
-                value = henCountInput,
-                onValueChange = { henCountInput = it.filter { char -> char.isDigit() } },
-                label = { Text("Quantidade de galinhas") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val count = henCountInput.toIntOrNull()
-                    if (count != null) {
-                        onConfirm(count)
-                    } else {
-                        android.widget.Toast.makeText(context, "Por favor, insira um número.", android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                }
-            ) {
-                Text("Confirmar")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
+        dismissButton = { Button(onClick = onDismiss) { Text("Cancelar") } }
     )
 }
 
@@ -290,7 +291,6 @@ fun HenCountDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
 fun FeedConsumptionDialog(onDismiss: () -> Unit, onConfirm: (Double) -> Unit) {
     var feedInput by remember { mutableStateOf("") }
     val context = LocalContext.current
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Registar Consumo de Ração") },
@@ -304,61 +304,44 @@ fun FeedConsumptionDialog(onDismiss: () -> Unit, onConfirm: (Double) -> Unit) {
             )
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    val amount = feedInput.replace(',', '.').toDoubleOrNull()
-                    if (amount != null) {
-                        onConfirm(amount)
-                    } else {
-                        android.widget.Toast.makeText(context, "Por favor, insira um valor válido.", android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                }
-            ) {
-                Text("Confirmar")
-            }
+            Button(onClick = {
+                val amount = feedInput.replace(',', '.').toDoubleOrNull()
+                if (amount != null) onConfirm(amount)
+                else android.widget.Toast.makeText(context, "Por favor, insira um valor válido.", android.widget.Toast.LENGTH_SHORT).show()
+            }) { Text("Confirmar") }
         },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
+        dismissButton = { Button(onClick = onDismiss) { Text("Cancelar") } }
     )
 }
 
 @Composable
 fun ProductionChart(modifier: Modifier = Modifier, data: List<Int>) {
     val primaryColor = MaterialTheme.colorScheme.primary
-
     if (data.isEmpty()) {
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            Text("Sem dados de produção.")
+            Text("Sem dados de produção para exibir o gráfico.")
         }
         return
     }
-
     Canvas(modifier = modifier) {
         val maxValue = data.maxOrNull() ?: 0
         val minValue = data.minOrNull() ?: 0
         val valueRange = (maxValue - minValue).toFloat().coerceAtLeast(1f)
-
         val path = Path()
-
         data.forEachIndexed { index, value ->
             val x = size.width * (index.toFloat() / (data.size - 1).toFloat().coerceAtLeast(1f))
             val y = size.height * (1 - ((value - minValue) / valueRange))
-
-            if (index == 0) {
-                path.moveTo(x, y)
-            } else {
-                path.lineTo(x, y)
-            }
+            if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
             drawCircle(color = primaryColor, radius = 8f, center = Offset(x, y))
         }
+        drawPath(path = path, color = primaryColor, style = Stroke(width = 5f))
+    }
+}
 
-        drawPath(
-            path = path,
-            color = primaryColor,
-            style = Stroke(width = 5f)
-        )
+@Preview(showBackground = true)
+@Composable
+fun HomeScreenPreview() {
+    MeuAviarioTheme {
+        HomeScreen(navController = rememberNavController())
     }
 }

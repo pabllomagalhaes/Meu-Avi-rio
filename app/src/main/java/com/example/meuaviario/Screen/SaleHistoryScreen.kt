@@ -16,23 +16,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.meuaviario.ViewModel.ExpenseHistoryViewModel
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExpenseHistoryScreen(
+fun SaleHistoryScreen(
     navController: NavController,
-    viewModel: ExpenseHistoryViewModel = viewModel()
+    viewModel: SaleHistoryViewModel = viewModel()
 ) {
-    val expenses = viewModel.expenses.value
+    val sales = viewModel.sales.value
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Histórico de Despesas") },
+                title = { Text("Histórico de Vendas") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
@@ -44,18 +43,18 @@ fun ExpenseHistoryScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate("expense") }) {
-                Icon(Icons.Default.Add, contentDescription = "Adicionar Despesa")
+            FloatingActionButton(onClick = { navController.navigate("sale") }) {
+                Icon(Icons.Default.Add, contentDescription = "Registar Venda")
             }
         },
         content = { paddingValues ->
-            if (expenses.isEmpty()) {
+            if (sales.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Nenhuma despesa registada.",
+                        text = "Nenhuma venda registada.",
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -67,8 +66,8 @@ fun ExpenseHistoryScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(expenses) { expense ->
-                        ExpenseItem(expense = expense)
+                    items(sales) { sale ->
+                        SaleItem(sale = sale)
                     }
                 }
             }
@@ -77,7 +76,7 @@ fun ExpenseHistoryScreen(
 }
 
 @Composable
-fun ExpenseItem(expense: Expense) {
+fun SaleItem(sale: Sale) {
     val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("pt", "BR")) }
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
@@ -88,13 +87,29 @@ fun ExpenseItem(expense: Expense) {
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(expense.description, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(expense.category, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                expense.timestamp?.let {
-                    Text(dateFormat.format(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = "${sale.quantityInDozens} dúzias vendidas",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Preço unitário: ${currencyFormat.format(sale.pricePerDozen)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                sale.timestamp?.let {
+                    Text(
+                        text = dateFormat.format(it),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
-            Text(currencyFormat.format(expense.amount), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+            Text(
+                text = currencyFormat.format(sale.totalAmount),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

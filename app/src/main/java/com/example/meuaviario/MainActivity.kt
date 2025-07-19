@@ -60,6 +60,12 @@ class MainActivity : ComponentActivity() {
                     composable("batch"){
                         BatchScreen(navController = navController)
                     }
+                    composable("sale_history") {
+                        SaleHistoryScreen(navController = navController)
+                    }
+                    composable("expense_history") {
+                        ExpenseHistoryScreen(navController = navController)
+                    }
                 }
             }
         }
