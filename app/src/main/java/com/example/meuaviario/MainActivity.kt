@@ -48,9 +48,15 @@ class MainActivity : ComponentActivity() {
                         // Passamos o NavController para a HomeScreen
                         HomeScreen(navController = navController)
                     }
-                    // --- NOVA ROTA ---
+
                     composable("expense") {
                         ExpenseScreen(navController = navController)
+                    }
+                    composable("expense_history") {
+                        ExpenseHistoryScreen(navController = navController)
+                    }
+                    composable("sale") {
+                        SaleScreen(navController = navController)
                     }
                 }
             }
