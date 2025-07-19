@@ -8,16 +8,17 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.meuaviario.data.Batch
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -28,7 +29,10 @@ fun BatchScreen(
     viewModel: BatchViewModel = viewModel()
 ) {
     val batches = viewModel.batches.value
-    var showAddBatchDialog by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
+    var batchToEdit by remember { mutableStateOf<Batch?>(null) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var batchToDelete by remember { mutableStateOf<Batch?>(null) }
 
     Scaffold(
         topBar = {
@@ -36,40 +40,70 @@ fun BatchScreen(
                 title = { Text("Gestão de Lotes") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Voltar"
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar")
                     }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddBatchDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Adicionar Lote")
+            FloatingActionButton(onClick = {
+                batchToEdit = null // Garante que é um novo lote
+                showDialog = true
+            }) {
+                Icon(Icons.Default.Add, "Adicionar Lote")
             }
         },
         content = { paddingValues ->
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(batches) { batch ->
-                    BatchItem(batch = batch)
+                    BatchItem(
+                        batch = batch,
+                        onEditClick = {
+                            batchToEdit = it
+                            showDialog = true
+                        },
+                        onDeleteClick = {
+                            batchToDelete = it
+                            showDeleteConfirmDialog = true
+                        }
+                    )
                 }
             }
 
-            if (showAddBatchDialog) {
+            if (showDialog) {
                 AddBatchDialog(
-                    onDismiss = { showAddBatchDialog = false },
+                    batchToEdit = batchToEdit,
+                    onDismiss = { showDialog = false },
                     onConfirm = { name, breed, numberOfHens ->
-                        viewModel.addBatch(name, breed, numberOfHens,
-                            onSuccess = { showAddBatchDialog = false },
-                            onError = { /* Tratar erro */ }
-                        )
+                        if (batchToEdit == null) { // Adicionar novo
+                            viewModel.addBatch(name, breed, numberOfHens,
+                                onSuccess = { showDialog = false },
+                                onError = { /* Tratar erro */ }
+                            )
+                        } else { // Atualizar existente
+                            viewModel.updateBatch(batchToEdit!!.id, name, breed, numberOfHens,
+                                onSuccess = { showDialog = false },
+                                onError = { /* Tratar erro */ }
+                            )
+                        }
+                    }
+                )
+            }
+
+            if (showDeleteConfirmDialog) {
+                DeleteConfirmDialog(
+                    onDismiss = { showDeleteConfirmDialog = false },
+                    onConfirm = {
+                        batchToDelete?.let {
+                            viewModel.deleteBatch(it.id,
+                                onSuccess = { showDeleteConfirmDialog = false },
+                                onError = { /* Tratar erro */ }
+                            )
+                        }
                     }
                 )
             }
@@ -78,17 +112,24 @@ fun BatchScreen(
 }
 
 @Composable
-fun BatchItem(batch: Batch) {
+fun BatchItem(batch: Batch, onEditClick: (Batch) -> Unit, onDeleteClick: (Batch) -> Unit) {
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(batch.name, style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("Raça: ${batch.breed}", style = MaterialTheme.typography.bodyMedium)
-            Text("Nº de Aves: ${batch.numberOfHens}", style = MaterialTheme.typography.bodyMedium)
-            batch.startDate?.let {
-                Text("Início: ${dateFormat.format(it)}", style = MaterialTheme.typography.bodySmall)
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(batch.name, style = MaterialTheme.typography.titleMedium)
+                Text("Raça: ${batch.breed}", style = MaterialTheme.typography.bodyMedium)
+                Text("Nº de Aves: ${batch.numberOfHens}", style = MaterialTheme.typography.bodyMedium)
+                batch.startDate?.let {
+                    Text("Início: ${dateFormat.format(it)}", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            IconButton(onClick = { onEditClick(batch) }) {
+                Icon(Icons.Default.Edit, "Editar Lote")
+            }
+            IconButton(onClick = { onDeleteClick(batch) }) {
+                Icon(Icons.Default.Delete, "Eliminar Lote")
             }
         }
     }
@@ -96,34 +137,27 @@ fun BatchItem(batch: Batch) {
 
 @Composable
 fun AddBatchDialog(
+    batchToEdit: Batch?,
     onDismiss: () -> Unit,
     onConfirm: (String, String, Int) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var breed by remember { mutableStateOf("") }
-    var numberOfHens by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(batchToEdit?.name ?: "") }
+    var breed by remember { mutableStateOf(batchToEdit?.breed ?: "") }
+    var numberOfHens by remember { mutableStateOf(batchToEdit?.numberOfHens?.toString() ?: "") }
     val context = LocalContext.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Adicionar Novo Lote") },
+        title = { Text(if (batchToEdit == null) "Adicionar Novo Lote" else "Editar Lote") },
         text = {
             Column {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Nome do Lote") }
-                )
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nome do Lote") })
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = breed,
-                    onValueChange = { breed = it },
-                    label = { Text("Raça") }
-                )
+                OutlinedTextField(value = breed, onValueChange = { breed = it }, label = { Text("Raça") })
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = numberOfHens,
-                    onValueChange = { numberOfHens = it.filter { char -> char.isDigit() } },
+                    onValueChange = { numberOfHens = it.filter { c -> c.isDigit() } },
                     label = { Text("Nº de Aves") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
@@ -141,6 +175,28 @@ fun AddBatchDialog(
                 }
             ) {
                 Text("Guardar")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+@Composable
+fun DeleteConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirmar Eliminação") },
+        text = { Text("Tem a certeza de que deseja eliminar este lote? Esta ação não pode ser desfeita.") },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Eliminar")
             }
         },
         dismissButton = {
