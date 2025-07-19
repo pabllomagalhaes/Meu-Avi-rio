@@ -26,7 +26,6 @@ class HomeViewModel : ViewModel() {
         private set
     var monthlyExpenses by mutableStateOf<Double?>(null)
         private set
-    // Novo estado para o total de vendas do mês
     var monthlySales by mutableStateOf<Double?>(null)
         private set
 
@@ -37,14 +36,35 @@ class HomeViewModel : ViewModel() {
         listenForSummaryUpdates()
         fetchWeeklyData()
         listenForMonthlyExpenses()
-        listenForMonthlySales() // Nova função de escuta
+        listenForMonthlySales()
+        listenForBatchUpdatesAndSyncHenCount() // Nova função de escuta para lotes
+    }
+
+    // --- NOVA FUNÇÃO DE INTEGRAÇÃO ---
+    private fun listenForBatchUpdatesAndSyncHenCount() {
+        val userId = auth.currentUser?.uid ?: return
+
+        firestore.collection("users").document(userId)
+            .collection("batches")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("HomeViewModel", "Erro ao escutar lotes.", error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    // Soma o número de galinhas de todos os lotes
+                    val totalHens = snapshot.documents.sumOf { it.getLong("numberOfHens")?.toInt() ?: 0 }
+                    // Atualiza o campo 'activeHens' no documento de resumo
+                    updateActiveHens(totalHens)
+                }
+            }
     }
 
     private fun listenForSummaryUpdates() {
         val userId = auth.currentUser?.uid ?: return
         firestore.collection("users").document(userId)
             .collection("aviary").document("summary")
-            .addSnapshotListener { snapshot, error ->
+            .addSnapshotListener { snapshot, _ ->
                 if (snapshot != null && snapshot.exists()) {
                     summary = snapshot.toObject<AviarySummary>()
                 }
@@ -89,7 +109,6 @@ class HomeViewModel : ViewModel() {
             }
     }
 
-    // --- NOVA FUNÇÃO ---
     private fun listenForMonthlySales() {
         val userId = auth.currentUser?.uid ?: return
         val (startOfMonth, startOfNextMonth) = getMonthDateRange()
@@ -130,6 +149,7 @@ class HomeViewModel : ViewModel() {
         }.commit().addOnSuccessListener { fetchWeeklyData() }
     }
 
+    // A função agora é privada, pois é controlada automaticamente
     fun updateActiveHens(henCount: Int) {
         val userId = auth.currentUser?.uid ?: return
         val dataToUpdate = mapOf("activeHens" to henCount)

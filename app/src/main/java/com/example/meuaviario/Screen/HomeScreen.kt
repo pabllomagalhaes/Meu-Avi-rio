@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -49,6 +50,10 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
                     }
                     IconButton(onClick = { navController.navigate("sale") }) {
                         Icon(Icons.Filled.Star, contentDescription = "Registar Venda")
+                    }
+                    // --- NOVO BOTÃO DE GESTÃO DE LOTES ---
+                    IconButton(onClick = { navController.navigate("batch") }) {
+                        Icon(Icons.Filled.Home, contentDescription = "Gestão de Lotes")
                     }
                 },
                 floatingActionButton = {
