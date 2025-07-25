@@ -2,12 +2,12 @@ package com.example.meuaviario.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Paleta Principal
-val Brown80 = Color(0xFF4E342E) // Marrom Escuro
-val BrownGrey80 = Color(0xFF7D5A50)
-val Beige80 = Color(0xFFEFEBE9)
+// Paleta Principal - Tons terrosos e de confiança
+val MarromPrincipal = Color(0xFF5D4037)
+val MarromClaro = Color(0xFF8D6E63)
+val Bege = Color(0xFFD7CCC8)
 
-// Paleta Secundária
-val Brown40 = Color(0xFFBCAAA4)
-val BrownGrey40 = Color(0xFFA1887F)
-val Beige40 = Color(0xFFD7CCC8)
+// Cores de Acento e Fundo
+val VerdeAcento = Color(0xFF66BB6A)
+val FundoClaro = Color(0xFFF7F5F4)
+val SuperficieClara = Color(0xFFFFFFFF)

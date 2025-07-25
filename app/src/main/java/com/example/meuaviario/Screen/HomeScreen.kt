@@ -24,18 +24,16 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -72,32 +70,39 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Meu Aviário") }) },
+        // --- DESIGN MELHORADO: NavigationBar para mais clareza ---
         bottomBar = {
-            BottomAppBar(
-                actions = {
-                    IconButton(onClick = { /* Faz nada */ }, enabled = false) {
-                        Icon(Icons.Filled.Star, contentDescription = "Painel de Controle", tint = MaterialTheme.colorScheme.primary)
-                    }
-                    IconButton(onClick = { navController.navigate("batch") }) {
-                        Icon(Icons.Filled.Home, contentDescription = "Gestão de Lotes", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconButton(onClick = { navController.navigate("expense_history") }) {
-                        Icon(Icons.Filled.List, contentDescription = "Histórico de Despesas", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconButton(onClick = { navController.navigate("sale_history") }) {
-                        Icon(Icons.Filled.Menu, contentDescription = "Histórico de Vendas", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                },
-                floatingActionButton = {
-                    FloatingActionButton(
-                        onClick = { showEggDialog = true },
-                        containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
-                        elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
-                    ) {
-                        Icon(Icons.Filled.Add, "Registar Coleta de Ovos")
-                    }
-                }
-            )
+            NavigationBar {
+                NavigationBarItem(
+                    selected = true,
+                    onClick = { /* Já estamos aqui */ },
+                    icon = { Icon(Icons.Filled.Home, contentDescription = "Painel") },
+                    label = { Text("Painel") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { navController.navigate("batch") },
+                    icon = { Icon(Icons.Filled.Star, contentDescription = "Lotes") },
+                    label = { Text("Lotes") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { navController.navigate("expense_history") },
+                    icon = { Icon(Icons.Filled.List, contentDescription = "Despesas") },
+                    label = { Text("Despesas") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { navController.navigate("sale_history") },
+                    icon = { Icon(Icons.Filled.Menu, contentDescription = "Vendas") },
+                    label = { Text("Vendas") }
+                )
+            }
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showEggDialog = true }) {
+                Icon(Icons.Filled.Add, "Registar Coleta de Ovos")
+            }
         },
         content = { paddingValues ->
             HomeContent(
@@ -176,7 +181,7 @@ fun HomeContent(
                 InfoCard(title = "Despesas (Mês)", value = currencyFormat.format(monthlyExpenses ?: 0.0), modifier = Modifier.weight(1f))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             Text("Métricas de Produção", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -191,17 +196,13 @@ fun HomeContent(
                 InfoCard(title = "Ovos Hoje", value = summary.eggsToday.toString(), modifier = Modifier.weight(1f))
             }
 
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp)
-                    .clickable(onClick = onFeedCardClick)
-            ) {
-                Row(modifier = Modifier.padding(16.dp)) {
-                    Text("Ração Consumida Hoje:", style = MaterialTheme.typography.bodyLarge)
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text("${summary.feedConsumedToday} kg", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                }
+            // --- DESIGN MELHORADO: InfoCard clicável para consistência visual ---
+            Box(modifier = Modifier.padding(top = 16.dp)) {
+                InfoCard(
+                    title = "Ração Consumida Hoje",
+                    value = "${summary.feedConsumedToday} kg",
+                    modifier = Modifier.fillMaxWidth().clickable(onClick = onFeedCardClick)
+                )
             }
 
             Card(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {

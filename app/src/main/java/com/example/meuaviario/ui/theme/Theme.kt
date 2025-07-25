@@ -9,30 +9,37 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = lightColorScheme(
-    primary = Brown40,
-    secondary = BrownGrey40,
-    tertiary = Beige40
-)
-
+// Paleta de cores para o tema claro, utilizando as novas cores
 private val LightColorScheme = lightColorScheme(
-    primary = Brown80,
-    secondary = BrownGrey80,
-    tertiary = Beige80,
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+    primary = MarromPrincipal,
+    secondary = MarromClaro,
+    tertiary = VerdeAcento,
+    background = FundoClaro,
+    surface = SuperficieClara,
     onPrimary = Color.White,
     onSecondary = Color.White,
     onTertiary = Color.White,
     onBackground = Color(0xFF1C1B1F),
     onSurface = Color(0xFF1C1B1F),
-
-
-
+    primaryContainer = Bege,
+    surfaceVariant = FundoClaro
 )
+
+// (Opcional) Podemos definir uma paleta para o tema escuro no futuro
+private val DarkColorScheme = lightColorScheme(
+    primary = MarromClaro,
+    secondary = Bege,
+    tertiary = VerdeAcento,
+    // ... outras cores para o tema escuro
+)
+
 
 @Composable
 fun MeuAviarioTheme(
@@ -49,6 +56,14 @@ fun MeuAviarioTheme(
 
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
+    }
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            window.statusBarColor = colorScheme.primary.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+        }
     }
 
     MaterialTheme(
