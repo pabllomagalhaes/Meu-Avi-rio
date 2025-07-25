@@ -20,7 +20,8 @@ class HomeViewModel : ViewModel() {
 
     var summary by mutableStateOf<AviarySummary?>(null)
         private set
-    var weeklyProduction by mutableStateOf<List<Int>>(emptyList())
+    // Alterado para conter a lista completa de dados diários
+    var weeklyProductionData by mutableStateOf<List<DailyProduction>>(emptyList())
         private set
     var feedConversionRatio by mutableStateOf<Double?>(null)
         private set
@@ -28,7 +29,6 @@ class HomeViewModel : ViewModel() {
         private set
     var monthlySales by mutableStateOf<Double?>(null)
         private set
-    // Novo estado para os alertas
     var alerts by mutableStateOf<List<String>>(emptyList())
         private set
 
@@ -75,7 +75,8 @@ class HomeViewModel : ViewModel() {
             .get()
             .addOnSuccessListener { querySnapshot ->
                 val dailyData = querySnapshot.documents.mapNotNull { it.toObject<DailyProduction>() }
-                weeklyProduction = dailyData.map { it.eggs }.reversed()
+                // Guarda a lista completa e invertida
+                weeklyProductionData = dailyData.reversed()
 
                 val totalEggs = dailyData.sumOf { it.eggs }
                 val totalFeed = dailyData.sumOf { it.feedConsumed }
@@ -87,19 +88,16 @@ class HomeViewModel : ViewModel() {
                     feedConversionRatio = 0.0
                 }
 
-                // --- LÓGICA DE ANÁLISE DE ALERTAS ---
-                checkForProductionDrop(weeklyProduction)
+                checkForProductionDrop(dailyData.map { it.eggs })
             }
     }
 
-    // --- NOVA FUNÇÃO DE ANÁLISE ---
     private fun checkForProductionDrop(dailyEggCounts: List<Int>) {
         val newAlerts = mutableListOf<String>()
-        if (dailyEggCounts.size >= 3) { // Analisa se tivermos pelo menos 3 dias de dados
+        if (dailyEggCounts.size >= 3) {
             val averageOfFirstDays = dailyEggCounts.dropLast(1).average()
             val lastDayProduction = dailyEggCounts.last().toDouble()
 
-            // Alerta se a produção cair mais de 15%
             if (lastDayProduction < averageOfFirstDays * 0.85) {
                 newAlerts.add("Queda na produção. Verifique o bem-estar das aves.")
             }

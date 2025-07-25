@@ -32,6 +32,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.meuaviario.ui.theme.MeuAviarioTheme
 import java.text.DecimalFormat
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,7 +80,7 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
             HomeContent(
                 paddingValues = paddingValues,
                 summary = homeViewModel.summary,
-                weeklyProduction = homeViewModel.weeklyProduction,
+                weeklyProductionData = homeViewModel.weeklyProductionData, // Alterado para a nova lista
                 feedConversionRatio = homeViewModel.feedConversionRatio,
                 monthlyExpenses = homeViewModel.monthlyExpenses,
                 monthlySales = homeViewModel.monthlySales,
@@ -97,7 +98,7 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
 fun HomeContent(
     paddingValues: PaddingValues,
     summary: AviarySummary?,
-    weeklyProduction: List<Int>,
+    weeklyProductionData: List<DailyProduction>, // Alterado para a nova lista
     feedConversionRatio: Double?,
     monthlyExpenses: Double?,
     monthlySales: Double?,
@@ -179,7 +180,7 @@ fun HomeContent(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Produção (Últimos 7 dias)", style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.height(16.dp))
-                    ProductionChart(modifier = Modifier.fillMaxWidth().height(150.dp), data = weeklyProduction)
+                    ProductionChart(modifier = Modifier.fillMaxWidth().height(150.dp), data = weeklyProductionData) // Passa a nova lista
                 }
             }
 
@@ -286,10 +287,11 @@ fun FeedConsumptionDialog(onDismiss: () -> Unit, onConfirm: (Double) -> Unit) {
 }
 
 @Composable
-fun ProductionChart(modifier: Modifier = Modifier, data: List<Int>) {
+fun ProductionChart(modifier: Modifier = Modifier, data: List<DailyProduction>) { // Alterado para receber a nova lista
     val textMeasurer = rememberTextMeasurer()
     val primaryColor = MaterialTheme.colorScheme.primary
     val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val dateFormat = remember { SimpleDateFormat("dd/MM", Locale.getDefault()) }
 
     if (data.isEmpty()) {
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
@@ -299,14 +301,26 @@ fun ProductionChart(modifier: Modifier = Modifier, data: List<Int>) {
     }
 
     Canvas(modifier = modifier) {
-        val maxValue = data.maxOrNull() ?: 0
-        val minValue = data.minOrNull() ?: 0
+        val paddingBottom = 40.dp.toPx() // Espaço para a legenda
+        val chartHeight = size.height - paddingBottom
+
+        val eggData = data.map { it.eggs }
+        val maxValue = eggData.maxOrNull() ?: 0
+        val minValue = eggData.minOrNull() ?: 0
         val valueRange = (maxValue - minValue).toFloat().coerceAtLeast(1f)
         val path = Path()
 
-        data.forEachIndexed { index, value ->
+        // Desenha o eixo X
+        drawLine(
+            color = onSurfaceColor.copy(alpha = 0.5f),
+            start = Offset(0f, chartHeight),
+            end = Offset(size.width, chartHeight),
+            strokeWidth = 2f
+        )
+
+        data.forEachIndexed { index, dailyProd ->
             val x = size.width * (index.toFloat() / (data.size - 1).toFloat().coerceAtLeast(1f))
-            val y = size.height * (1 - ((value - minValue) / valueRange))
+            val y = chartHeight * (1 - ((dailyProd.eggs - minValue) / valueRange))
 
             if (index == 0) {
                 path.moveTo(x, y)
@@ -318,34 +332,31 @@ fun ProductionChart(modifier: Modifier = Modifier, data: List<Int>) {
 
         drawPath(path = path, color = primaryColor, style = Stroke(width = 5f))
 
-        // Desenha os valores de texto acima dos pontos
-        data.forEachIndexed { index, value ->
+        data.forEachIndexed { index, dailyProd ->
             val x = size.width * (index.toFloat() / (data.size - 1).toFloat().coerceAtLeast(1f))
-            val y = size.height * (1 - ((value - minValue) / valueRange))
+            val y = chartHeight * (1 - ((dailyProd.eggs - minValue) / valueRange))
 
-            val text = value.toString()
-            val measuredText = textMeasurer.measure(
-                text = text,
-                style = TextStyle(
-                    color = onSurfaceColor,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            )
-
+            // Desenha o valor dos ovos
+            val eggText = dailyProd.eggs.toString()
+            val measuredEggText = textMeasurer.measure(eggText, style = TextStyle(color = onSurfaceColor, fontSize = 12.sp, fontWeight = FontWeight.Bold))
             drawText(
                 textMeasurer = textMeasurer,
-                text = text,
-                style = TextStyle(
-                    color = onSurfaceColor,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                ),
-                topLeft = Offset(
-                    x = x - (measuredText.size.width / 2),
-                    y = y - measuredText.size.height - 15f // Posiciona o texto acima do ponto
-                )
+                text = eggText,
+                style = TextStyle(color = onSurfaceColor, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                topLeft = Offset(x - (measuredEggText.size.width / 2), y - measuredEggText.size.height - 20f)
             )
+
+            // Desenha a data na legenda
+            dailyProd.timestamp?.let {
+                val dateText = dateFormat.format(it)
+                val measuredDateText = textMeasurer.measure(dateText, style = TextStyle(color = onSurfaceColor, fontSize = 10.sp))
+                drawText(
+                    textMeasurer = textMeasurer,
+                    text = dateText,
+                    style = TextStyle(color = onSurfaceColor, fontSize = 10.sp),
+                    topLeft = Offset(x - (measuredDateText.size.width / 2), chartHeight + 10f)
+                )
+            }
         }
     }
 }
