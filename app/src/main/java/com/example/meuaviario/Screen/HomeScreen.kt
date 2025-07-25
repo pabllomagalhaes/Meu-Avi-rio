@@ -2,47 +2,15 @@ package com.example.meuaviario
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -50,10 +18,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
@@ -70,31 +42,30 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Meu Aviário") }) },
-        // --- DESIGN MELHORADO: NavigationBar para mais clareza ---
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
                     selected = true,
                     onClick = { /* Já estamos aqui */ },
-                    icon = { Icon(Icons.Filled.Home, contentDescription = "Painel") },
+                    icon = { Icon(Icons.Filled.SpaceDashboard, contentDescription = "Painel") },
                     label = { Text("Painel") }
                 )
                 NavigationBarItem(
                     selected = false,
-                    onClick = { navController.navigate("batch") },
-                    icon = { Icon(Icons.Filled.Star, contentDescription = "Lotes") },
+                    onClick = { navController.navigate("batch") { popUpTo("home") { inclusive = true } } },
+                    icon = { Icon(Icons.Filled.Inventory, contentDescription = "Lotes") },
                     label = { Text("Lotes") }
                 )
                 NavigationBarItem(
                     selected = false,
-                    onClick = { navController.navigate("expense_history") },
-                    icon = { Icon(Icons.Filled.List, contentDescription = "Despesas") },
+                    onClick = { navController.navigate("expense_history") { popUpTo("home") { inclusive = true } } },
+                    icon = { Icon(Icons.Filled.ShoppingCartCheckout, contentDescription = "Despesas") },
                     label = { Text("Despesas") }
                 )
                 NavigationBarItem(
                     selected = false,
-                    onClick = { navController.navigate("sale_history") },
-                    icon = { Icon(Icons.Filled.Menu, contentDescription = "Vendas") },
+                    onClick = { navController.navigate("sale_history") { popUpTo("home") { inclusive = true } } },
+                    icon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = "Vendas") },
                     label = { Text("Vendas") }
                 )
             }
@@ -196,7 +167,6 @@ fun HomeContent(
                 InfoCard(title = "Ovos Hoje", value = summary.eggsToday.toString(), modifier = Modifier.weight(1f))
             }
 
-            // --- DESIGN MELHORADO: InfoCard clicável para consistência visual ---
             Box(modifier = Modifier.padding(top = 16.dp)) {
                 InfoCard(
                     title = "Ração Consumida Hoje",
@@ -317,25 +287,66 @@ fun FeedConsumptionDialog(onDismiss: () -> Unit, onConfirm: (Double) -> Unit) {
 
 @Composable
 fun ProductionChart(modifier: Modifier = Modifier, data: List<Int>) {
+    val textMeasurer = rememberTextMeasurer()
     val primaryColor = MaterialTheme.colorScheme.primary
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+
     if (data.isEmpty()) {
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
             Text("Sem dados de produção para exibir o gráfico.")
         }
         return
     }
+
     Canvas(modifier = modifier) {
         val maxValue = data.maxOrNull() ?: 0
         val minValue = data.minOrNull() ?: 0
         val valueRange = (maxValue - minValue).toFloat().coerceAtLeast(1f)
         val path = Path()
+
         data.forEachIndexed { index, value ->
             val x = size.width * (index.toFloat() / (data.size - 1).toFloat().coerceAtLeast(1f))
             val y = size.height * (1 - ((value - minValue) / valueRange))
-            if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
-            drawCircle(color = primaryColor, radius = 8f, center = Offset(x, y))
+
+            if (index == 0) {
+                path.moveTo(x, y)
+            } else {
+                path.lineTo(x, y)
+            }
+            drawCircle(color = primaryColor, radius = 10f, center = Offset(x, y))
         }
+
         drawPath(path = path, color = primaryColor, style = Stroke(width = 5f))
+
+        // Desenha os valores de texto acima dos pontos
+        data.forEachIndexed { index, value ->
+            val x = size.width * (index.toFloat() / (data.size - 1).toFloat().coerceAtLeast(1f))
+            val y = size.height * (1 - ((value - minValue) / valueRange))
+
+            val text = value.toString()
+            val measuredText = textMeasurer.measure(
+                text = text,
+                style = TextStyle(
+                    color = onSurfaceColor,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+
+            drawText(
+                textMeasurer = textMeasurer,
+                text = text,
+                style = TextStyle(
+                    color = onSurfaceColor,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                topLeft = Offset(
+                    x = x - (measuredText.size.width / 2),
+                    y = y - measuredText.size.height - 15f // Posiciona o texto acima do ponto
+                )
+            )
+        }
     }
 }
 

@@ -101,7 +101,7 @@ class HomeViewModel : ViewModel() {
 
             // Alerta se a produção cair mais de 15%
             if (lastDayProduction < averageOfFirstDays * 0.85) {
-                newAlerts.add("Queda na produção detetada. Verifique o bem-estar das aves.")
+                newAlerts.add("Queda na produção. Verifique o bem-estar das aves.")
             }
         }
         alerts = newAlerts

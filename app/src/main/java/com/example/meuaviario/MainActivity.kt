@@ -4,25 +4,22 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -30,7 +27,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.meuaviario.ui.theme.MeuAviarioTheme
-
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,32 +39,13 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
 
                 NavHost(navController = navController, startDestination = "login") {
-                    composable("login") {
-                        LoginScreen(navController = navController)
-                    }
-                    composable("home") {
-                        // Passamos o NavController para a HomeScreen
-                        HomeScreen(navController = navController)
-                    }
-
-                    composable("expense") {
-                        ExpenseScreen(navController = navController)
-                    }
-                    composable("expense_history") {
-                        ExpenseHistoryScreen(navController = navController)
-                    }
-                    composable("sale") {
-                        SaleScreen(navController = navController)
-                    }
-                    composable("batch"){
-                        BatchScreen(navController = navController)
-                    }
-                    composable("sale_history") {
-                        SaleHistoryScreen(navController = navController)
-                    }
-                    composable("expense_history") {
-                        ExpenseHistoryScreen(navController = navController)
-                    }
+                    composable("login") { LoginScreen(navController = navController) }
+                    composable("home") { HomeScreen(navController = navController) }
+                    composable("expense") { ExpenseScreen(navController = navController) }
+                    composable("expense_history") { ExpenseHistoryScreen(navController = navController) }
+                    composable("sale") { SaleScreen(navController = navController) }
+                    composable("batch") { BatchScreen(navController = navController) }
+                    composable("sale_history") { SaleHistoryScreen(navController = navController) }
                 }
             }
         }
@@ -77,9 +57,29 @@ fun LoginScreen(
     navController: NavController,
     authViewModel: AuthViewModel = viewModel()
 ) {
-    var email by remember { mutableStateOf("") }
-    var senha by remember { mutableStateOf("") }
     val context = LocalContext.current
+
+    // --- Configuração do Google Sign-In ---
+    val gso = remember {
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken("78955678430-a2cs975eolqtqd06mqmd9tbqdv8kmnft.apps.googleusercontent.com") // Lembre-se de colar o seu Web Client ID aqui
+            .requestEmail()
+            .build()
+    }
+    val googleSignInClient = remember { GoogleSignIn.getClient(context, gso) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)!!
+            val idToken = account.idToken!!
+            authViewModel.signInWithGoogle(idToken)
+        } catch (e: ApiException) {
+            Toast.makeText(context, "Falha no login com Google.", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     LaunchedEffect(authViewModel.isAuthenticated) {
         if (authViewModel.isAuthenticated == true) {
@@ -88,46 +88,55 @@ fun LoginScreen(
             }
             authViewModel.resetAuthState()
         } else if (authViewModel.isAuthenticated == false) {
-            Toast.makeText(context, "Email ou senha incorretos.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Falha na autenticação.", Toast.LENGTH_LONG).show()
             authViewModel.resetAuthState()
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Meu Aviário Login", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(32.dp))
-        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
-        Spacer(modifier = Modifier.height(16.dp))
-        OutlinedTextField(value = senha, onValueChange = { senha = it }, label = { Text("Senha") })
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(onClick = {
-            authViewModel.loginUsuario(email, senha)
-        }) {
-            Text("Login")
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(onClick = {
-            authViewModel.registrarUsuario(
-                email = email,
-                senha = senha,
-                onSuccess = {
-                    Toast.makeText(context, "Registro bem-sucedido! Faça o login.", Toast.LENGTH_SHORT).show()
-                },
-                onError = { mensagemDeErro ->
-                    Toast.makeText(context, "Erro: $mensagemDeErro", Toast.LENGTH_LONG).show()
-                }
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.imagemapp),
+                contentDescription = "Logo Meu Aviário",
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
             )
-        }) {
-            Text("Registrar")
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text("Bem-vindo!", style = MaterialTheme.typography.headlineMedium)
+            Text(
+                "Acesse com sua conta Google para começar.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = { launcher.launch(googleSignInClient.signInIntent) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+            ) {
+                // Pode adicionar um ícone do Google aqui no futuro
+                Text("Entrar com o Google")
+            }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun LoginScreenPreview() {
+    MeuAviarioTheme {
+        LoginScreen(navController = rememberNavController())
     }
 }

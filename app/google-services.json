@@ -12,7 +12,20 @@
           "package_name": "com.example.meuaviario"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "78955678430-uk4df77tnu6as6lmnssutd4dri70if1t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.meuaviario",
+            "certificate_hash": "24c85c78d5da933f11e7364b4d4e98cb538fdcd1"
+          }
+        },
+        {
+          "client_id": "78955678430-a2cs975eolqtqd06mqmd9tbqdv8kmnft.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBJFGonWb2AhV1FZrxHUUg_w6PWmuBssI8"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "78955678430-a2cs975eolqtqd06mqmd9tbqdv8kmnft.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
