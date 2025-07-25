@@ -8,19 +8,16 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.meuaviario.data.Batch
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -31,10 +28,7 @@ fun BatchScreen(
     viewModel: BatchViewModel = viewModel()
 ) {
     val batches = viewModel.batches.value
-    var showDialog by remember { mutableStateOf(false) }
-    var batchToEdit by remember { mutableStateOf<Batch?>(null) }
-    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
-    var batchToDelete by remember { mutableStateOf<Batch?>(null) }
+    var showAddBatchDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -42,84 +36,40 @@ fun BatchScreen(
                 title = { Text("Gestão de Lotes") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voltar"
+                        )
                     }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                batchToEdit = null // Garante que é um novo lote
-                showDialog = true
-            }) {
-                Icon(Icons.Default.Add, "Adicionar Lote")
+            FloatingActionButton(onClick = { showAddBatchDialog = true }) {
+                Icon(Icons.Default.Add, contentDescription = "Adicionar Lote")
             }
         },
         content = { paddingValues ->
-            if (batches.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Nenhum lote registado.\nClique no botão '+' para adicionar o seu primeiro.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp) // Aumenta o espaçamento
-                ) {
-                    items(batches) { batch ->
-                        BatchItem(
-                            batch = batch,
-                            onEditClick = {
-                                batchToEdit = it
-                                showDialog = true
-                            },
-                            onDeleteClick = {
-                                batchToDelete = it
-                                showDeleteConfirmDialog = true
-                            }
-                        )
-                    }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(batches) { batch ->
+                    BatchItem(batch = batch)
                 }
             }
 
-            if (showDialog) {
+            if (showAddBatchDialog) {
                 AddBatchDialog(
-                    batchToEdit = batchToEdit,
-                    onDismiss = { showDialog = false },
+                    onDismiss = { showAddBatchDialog = false },
                     onConfirm = { name, breed, numberOfHens ->
-                        if (batchToEdit == null) { // Adicionar novo
-                            viewModel.addBatch(name, breed, numberOfHens,
-                                onSuccess = { showDialog = false },
-                                onError = { /* Tratar erro */ }
-                            )
-                        } else { // Atualizar existente
-                            viewModel.updateBatch(batchToEdit!!.id, name, breed, numberOfHens,
-                                onSuccess = { showDialog = false },
-                                onError = { /* Tratar erro */ }
-                            )
-                        }
-                    }
-                )
-            }
-
-            if (showDeleteConfirmDialog) {
-                DeleteConfirmDialog(
-                    onDismiss = { showDeleteConfirmDialog = false },
-                    onConfirm = {
-                        batchToDelete?.let {
-                            viewModel.deleteBatch(it.id,
-                                onSuccess = { showDeleteConfirmDialog = false },
-                                onError = { /* Tratar erro */ }
-                            )
-                        }
+                        viewModel.addBatch(name, breed, numberOfHens,
+                            onSuccess = { showAddBatchDialog = false },
+                            onError = { /* Tratar erro */ }
+                        )
                     }
                 )
             }
@@ -128,45 +78,17 @@ fun BatchScreen(
 }
 
 @Composable
-fun BatchItem(batch: Batch, onEditClick: (Batch) -> Unit, onDeleteClick: (Batch) -> Unit) {
+fun BatchItem(batch: Batch) {
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = batch.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Raça: ${batch.breed}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "Nº de Aves: ${batch.numberOfHens}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                batch.startDate?.let {
-                    Text(
-                        text = "Início: ${dateFormat.format(it)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            IconButton(onClick = { onEditClick(batch) }) {
-                Icon(Icons.Default.Edit, "Editar Lote")
-            }
-            IconButton(onClick = { onDeleteClick(batch) }) {
-                Icon(Icons.Default.Delete, "Eliminar Lote")
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(batch.name, style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("Raça: ${batch.breed}", style = MaterialTheme.typography.bodyMedium)
+            Text("Nº de Aves: ${batch.numberOfHens}", style = MaterialTheme.typography.bodyMedium)
+            batch.startDate?.let {
+                Text("Início: ${dateFormat.format(it)}", style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -174,27 +96,34 @@ fun BatchItem(batch: Batch, onEditClick: (Batch) -> Unit, onDeleteClick: (Batch)
 
 @Composable
 fun AddBatchDialog(
-    batchToEdit: Batch?,
     onDismiss: () -> Unit,
     onConfirm: (String, String, Int) -> Unit
 ) {
-    var name by remember { mutableStateOf(batchToEdit?.name ?: "") }
-    var breed by remember { mutableStateOf(batchToEdit?.breed ?: "") }
-    var numberOfHens by remember { mutableStateOf(batchToEdit?.numberOfHens?.toString() ?: "") }
+    var name by remember { mutableStateOf("") }
+    var breed by remember { mutableStateOf("") }
+    var numberOfHens by remember { mutableStateOf("") }
     val context = LocalContext.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (batchToEdit == null) "Adicionar Novo Lote" else "Editar Lote") },
+        title = { Text("Adicionar Novo Lote") },
         text = {
             Column {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nome do Lote") })
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nome do Lote") }
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(value = breed, onValueChange = { breed = it }, label = { Text("Raça") })
+                OutlinedTextField(
+                    value = breed,
+                    onValueChange = { breed = it },
+                    label = { Text("Raça") }
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = numberOfHens,
-                    onValueChange = { numberOfHens = it.filter { c -> c.isDigit() } },
+                    onValueChange = { numberOfHens = it.filter { char -> char.isDigit() } },
                     label = { Text("Nº de Aves") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
@@ -212,28 +141,6 @@ fun AddBatchDialog(
                 }
             ) {
                 Text("Guardar")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
-    )
-}
-
-@Composable
-fun DeleteConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Confirmar Eliminação") },
-        text = { Text("Tem a certeza de que deseja eliminar este lote? Esta ação não pode ser desfeita.") },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text("Eliminar")
             }
         },
         dismissButton = {
