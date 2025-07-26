@@ -20,8 +20,7 @@ class HomeViewModel : ViewModel() {
 
     var summary by mutableStateOf<AviarySummary?>(null)
         private set
-    // Alterado para conter a lista completa de dados diários
-    var weeklyProductionData by mutableStateOf<List<DailyProduction>>(emptyList())
+    var monthlyProductionData by mutableStateOf<List<DailyProduction>>(emptyList()) // Renomeado para refletir 30 dias
         private set
     var feedConversionRatio by mutableStateOf<Double?>(null)
         private set
@@ -37,7 +36,7 @@ class HomeViewModel : ViewModel() {
 
     init {
         listenForSummaryUpdates()
-        fetchWeeklyData()
+        listenForMonthlyData() // Alterado para usar o listener de 30 dias
         listenForMonthlyExpenses()
         listenForMonthlySales()
         listenForBatchUpdatesAndSyncHenCount()
@@ -66,29 +65,36 @@ class HomeViewModel : ViewModel() {
             }
     }
 
-    private fun fetchWeeklyData() {
+    // --- LÓGICA ATUALIZADA: Busca os últimos 30 dias ---
+    private fun listenForMonthlyData() {
         val userId = auth.currentUser?.uid ?: return
         firestore.collection("users").document(userId)
             .collection("daily_production")
             .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(7)
-            .get()
-            .addOnSuccessListener { querySnapshot ->
-                val dailyData = querySnapshot.documents.mapNotNull { it.toObject<DailyProduction>() }
-                // Guarda a lista completa e invertida
-                weeklyProductionData = dailyData.reversed()
-
-                val totalEggs = dailyData.sumOf { it.eggs }
-                val totalFeed = dailyData.sumOf { it.feedConsumed }
-
-                if (totalEggs > 0) {
-                    val dozens = totalEggs / 12.0
-                    feedConversionRatio = totalFeed / dozens
-                } else {
-                    feedConversionRatio = 0.0
+            .limit(30) // Alterado de 7 para 30
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("HomeViewModel", "Erro ao escutar dados mensais", error)
+                    return@addSnapshotListener
                 }
+                if (snapshot != null) {
+                    val dailyData = snapshot.documents.mapNotNull { it.toObject<DailyProduction>() }
+                    monthlyProductionData = dailyData.reversed()
 
-                checkForProductionDrop(dailyData.map { it.eggs })
+                    // O cálculo da conversão alimentar continua baseado nos últimos 7 dias para maior precisão
+                    val weeklyData = dailyData.take(7)
+                    val totalEggs = weeklyData.sumOf { it.eggs }
+                    val totalFeed = weeklyData.sumOf { it.feedConsumed }
+
+                    if (totalEggs > 0) {
+                        val dozens = totalEggs / 12.0
+                        feedConversionRatio = totalFeed / dozens
+                    } else {
+                        feedConversionRatio = 0.0
+                    }
+
+                    checkForProductionDrop(dailyData.map { it.eggs })
+                }
             }
     }
 
@@ -99,7 +105,7 @@ class HomeViewModel : ViewModel() {
             val lastDayProduction = dailyEggCounts.last().toDouble()
 
             if (lastDayProduction < averageOfFirstDays * 0.85) {
-                newAlerts.add("Queda na produção. Verifique o bem-estar das aves.")
+                newAlerts.add("Queda na produção detetada. Verifique o bem-estar das aves.")
             }
         }
         alerts = newAlerts
@@ -152,7 +158,7 @@ class HomeViewModel : ViewModel() {
         firestore.batch().apply {
             set(summaryRef, summaryUpdate, SetOptions.merge())
             set(dailyRecordRef, dailyRecordUpdate, SetOptions.merge())
-        }.commit().addOnSuccessListener { fetchWeeklyData() }
+        }.commit()
     }
 
     private fun updateActiveHens(henCount: Int) {
@@ -173,6 +179,6 @@ class HomeViewModel : ViewModel() {
         firestore.batch().apply {
             set(summaryRef, summaryUpdate, SetOptions.merge())
             set(dailyRecordRef, dailyRecordUpdate, SetOptions.merge())
-        }.commit().addOnSuccessListener { fetchWeeklyData() }
+        }.commit()
     }
 }

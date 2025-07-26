@@ -1,15 +1,52 @@
 package com.example.meuaviario
 
 import android.widget.Toast
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.outlined.Analytics
+import androidx.compose.material.icons.outlined.ContentPaste
+import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.Store
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -24,7 +61,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.meuaviario.ui.theme.MeuAviarioTheme
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,19 +84,25 @@ fun ExpenseHistoryScreen(
                 NavigationBarItem(
                     selected = false,
                     onClick = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
-                    icon = { Icon(Icons.Filled.SpaceDashboard, contentDescription = "Painel") },
+                    icon = { Icon(Icons.Outlined.Analytics, contentDescription = "Painel") },
                     label = { Text("Painel") }
                 )
                 NavigationBarItem(
                     selected = false,
+                    onClick = { navController.navigate("production") { popUpTo("home") { inclusive = true } } },
+                    icon = { Icon(Icons.Outlined.EditNote, contentDescription = "Produção") },
+                    label = { Text("Produção") }
+                )
+                NavigationBarItem(
+                    selected = false,
                     onClick = { navController.navigate("batch") { popUpTo("home") { inclusive = true } } },
-                    icon = { Icon(Icons.Filled.Inventory, contentDescription = "Lotes") },
+                    icon = { Icon(Icons.Outlined.ContentPaste, contentDescription = "Lotes") },
                     label = { Text("Lotes") }
                 )
                 NavigationBarItem(
                     selected = true,
                     onClick = { /* Já estamos aqui */ },
-                    icon = { Icon(Icons.Filled.ShoppingCartCheckout, contentDescription = "Despesas") },
+                    icon = { Icon(Icons.Outlined.Store, contentDescription = "Despesas") },
                     label = { Text("Despesas") }
                 )
                 NavigationBarItem(

@@ -19,15 +19,10 @@ import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Inventory
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Paid
-import androidx.compose.material.icons.filled.ShoppingCartCheckout
-import androidx.compose.material.icons.filled.SpaceDashboard
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Wallet
+import androidx.compose.material.icons.outlined.Analytics
+import androidx.compose.material.icons.outlined.ContentPaste
+import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.Store
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -83,37 +78,31 @@ fun BatchScreen(
             NavigationBar {
                 NavigationBarItem(
                     selected = false,
-                    onClick = {
-                        navController.navigate("home") {
-                            popUpTo("home") { inclusive = true }
-                        }
-                    },
-                    icon = { Icon(Icons.Filled.SpaceDashboard, contentDescription = "Painel") },
+                    onClick = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
+                    icon = { Icon(Icons.Outlined.Analytics, contentDescription = "Painel") },
                     label = { Text("Painel") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { navController.navigate("production") { popUpTo("home") { inclusive = true } } },
+                    icon = { Icon(Icons.Outlined.EditNote, contentDescription = "Produção") },
+                    label = { Text("Produção") }
                 )
                 NavigationBarItem(
                     selected = true,
                     onClick = { /* Já está nesta tela, não faz nada */ },
-                    icon = { Icon(Icons.Filled.Inventory, contentDescription = "Lotes") },
+                    icon = { Icon(Icons.Outlined.ContentPaste, contentDescription = "Lotes") },
                     label = { Text("Lotes") }
                 )
                 NavigationBarItem(
                     selected = false,
-                    onClick = {
-                        navController.navigate("expense_history") {
-                            popUpTo("home") { inclusive = true }
-                        }
-                    },
-                    icon = { Icon(Icons.Filled.ShoppingCartCheckout, contentDescription = "Despesas") },
+                    onClick = { navController.navigate("expense_history") { popUpTo("home") { inclusive = true } } },
+                    icon = { Icon(Icons.Outlined.Store, contentDescription = "Despesas") },
                     label = { Text("Despesas") }
                 )
                 NavigationBarItem(
                     selected = false,
-                    onClick = {
-                        navController.navigate("sale_history") {
-                            popUpTo("home") { inclusive = true }
-                        }
-                    },
+                    onClick = { navController.navigate("sale_history") { popUpTo("home") { inclusive = true } } },
                     icon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = "Vendas") },
                     label = { Text("Vendas") }
                 )

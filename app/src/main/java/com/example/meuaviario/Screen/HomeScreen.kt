@@ -1,27 +1,56 @@
 package com.example.meuaviario
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.Analytics
+import androidx.compose.material.icons.outlined.ContentPaste
+import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.Store
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -42,25 +71,31 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
     var showFeedDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Meu Aviário") }) },
+        topBar = { TopAppBar(title = { Text("Painel de Controle") }) }, // Título alterado
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
                     selected = true,
                     onClick = { /* Já estamos aqui */ },
-                    icon = { Icon(Icons.Filled.SpaceDashboard, contentDescription = "Painel") },
+                    icon = { Icon(Icons.Outlined.Analytics, contentDescription = "Painel") },
                     label = { Text("Painel") }
                 )
                 NavigationBarItem(
                     selected = false,
+                    onClick = { navController.navigate("production") { popUpTo("home") { inclusive = true } } },
+                    icon = { Icon(Icons.Outlined.EditNote, contentDescription = "Produção") },
+                    label = { Text("Produção") }
+                )
+                NavigationBarItem(
+                    selected = false,
                     onClick = { navController.navigate("batch") { popUpTo("home") { inclusive = true } } },
-                    icon = { Icon(Icons.Filled.Inventory, contentDescription = "Lotes") },
+                    icon = { Icon(Icons.Outlined.ContentPaste, contentDescription = "Lotes") },
                     label = { Text("Lotes") }
                 )
                 NavigationBarItem(
                     selected = false,
                     onClick = { navController.navigate("expense_history") { popUpTo("home") { inclusive = true } } },
-                    icon = { Icon(Icons.Filled.ShoppingCartCheckout, contentDescription = "Despesas") },
+                    icon = { Icon(Icons.Outlined.Store, contentDescription = "Despesas") },
                     label = { Text("Despesas") }
                 )
                 NavigationBarItem(
@@ -71,25 +106,16 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
                 )
             }
         },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showEggDialog = true }) {
-                Icon(Icons.Filled.Add, "Registar Coleta de Ovos")
-            }
-        },
         content = { paddingValues ->
             HomeContent(
                 paddingValues = paddingValues,
                 summary = homeViewModel.summary,
-                weeklyProductionData = homeViewModel.weeklyProductionData, // Alterado para a nova lista
+                monthlyProductionData = homeViewModel.monthlyProductionData,
                 feedConversionRatio = homeViewModel.feedConversionRatio,
                 monthlyExpenses = homeViewModel.monthlyExpenses,
                 monthlySales = homeViewModel.monthlySales,
-                alerts = homeViewModel.alerts,
-                onFeedCardClick = { showFeedDialog = true }
+                alerts = homeViewModel.alerts
             )
-
-            if (showEggDialog) { EggCollectionDialog(onDismiss = { showEggDialog = false }, onConfirm = { homeViewModel.updateEggsToday(it); showEggDialog = false }) }
-            if (showFeedDialog) { FeedConsumptionDialog(onDismiss = { showFeedDialog = false }, onConfirm = { homeViewModel.updateFeedConsumption(it); showFeedDialog = false }) }
         }
     )
 }
@@ -98,12 +124,11 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
 fun HomeContent(
     paddingValues: PaddingValues,
     summary: AviarySummary?,
-    weeklyProductionData: List<DailyProduction>, // Alterado para a nova lista
+    monthlyProductionData: List<DailyProduction>,
     feedConversionRatio: Double?,
     monthlyExpenses: Double?,
     monthlySales: Double?,
-    alerts: List<String>,
-    onFeedCardClick: () -> Unit
+    alerts: List<String>
 ) {
     val scrollState = rememberScrollState()
     val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("pt", "BR")) }
@@ -115,8 +140,7 @@ fun HomeContent(
             .padding(horizontal = 16.dp)
             .verticalScroll(scrollState)
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("Painel de Controle", style = MaterialTheme.typography.headlineMedium)
+        // Texto "Painel de Controle" removido daqui
         Spacer(modifier = Modifier.height(16.dp))
 
         if (summary == null) {
@@ -160,7 +184,7 @@ fun HomeContent(
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 val postureRate = if (summary.activeHens > 0) (summary.eggsToday.toDouble() / summary.activeHens) * 100 else 0.0
                 InfoCard(title = "Taxa de Postura", value = "${DecimalFormat("0.0").format(postureRate)} %", modifier = Modifier.weight(1f))
-                InfoCard(title = "Conversão Alimentar", value = "${DecimalFormat("0.00").format(feedConversionRatio ?: 0.0)} kg/dúzia", modifier = Modifier.weight(1f))
+                InfoCard(title = "Conversão Alimentar (7d)", value = "${DecimalFormat("0.00").format(feedConversionRatio ?: 0.0)} kg/dúzia", modifier = Modifier.weight(1f))
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(top = 16.dp)) {
@@ -172,15 +196,15 @@ fun HomeContent(
                 InfoCard(
                     title = "Ração Consumida Hoje",
                     value = "${summary.feedConsumedToday} kg",
-                    modifier = Modifier.fillMaxWidth().clickable(onClick = onFeedCardClick)
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
             Card(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Produção (Últimos 7 dias)", style = MaterialTheme.typography.titleMedium)
+                    Text("Produção (Últimos 30 dias)", style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.height(16.dp))
-                    ProductionChart(modifier = Modifier.fillMaxWidth().height(150.dp), data = weeklyProductionData) // Passa a nova lista
+                    ProductionChart(modifier = Modifier.fillMaxWidth().height(200.dp), data = monthlyProductionData)
                 }
             }
 
@@ -188,6 +212,7 @@ fun HomeContent(
         }
     }
 }
+
 
 @Composable
 fun AlertCard(alerts: List<String>) {
@@ -233,61 +258,7 @@ fun InfoCard(title: String, value: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun EggCollectionDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
-    var eggCountInput by remember { mutableStateOf("") }
-    val context = LocalContext.current
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Registar Coleta de Ovos") },
-        text = {
-            OutlinedTextField(
-                value = eggCountInput,
-                onValueChange = { eggCountInput = it.filter { char -> char.isDigit() } },
-                label = { Text("Quantidade de ovos") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true
-            )
-        },
-        confirmButton = {
-            Button(onClick = {
-                val count = eggCountInput.toIntOrNull()
-                if (count != null) onConfirm(count)
-                else android.widget.Toast.makeText(context, "Por favor, insira um número.", android.widget.Toast.LENGTH_SHORT).show()
-            }) { Text("Confirmar") }
-        },
-        dismissButton = { Button(onClick = onDismiss) { Text("Cancelar") } }
-    )
-}
-
-@Composable
-fun FeedConsumptionDialog(onDismiss: () -> Unit, onConfirm: (Double) -> Unit) {
-    var feedInput by remember { mutableStateOf("") }
-    val context = LocalContext.current
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Registar Consumo de Ração") },
-        text = {
-            OutlinedTextField(
-                value = feedInput,
-                onValueChange = { feedInput = it },
-                label = { Text("Consumo em kg (ex: 4.5)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                singleLine = true
-            )
-        },
-        confirmButton = {
-            Button(onClick = {
-                val amount = feedInput.replace(',', '.').toDoubleOrNull()
-                if (amount != null) onConfirm(amount)
-                else android.widget.Toast.makeText(context, "Por favor, insira um valor válido.", android.widget.Toast.LENGTH_SHORT).show()
-            }) { Text("Confirmar") }
-        },
-        dismissButton = { Button(onClick = onDismiss) { Text("Cancelar") } }
-    )
-}
-
-@Composable
-fun ProductionChart(modifier: Modifier = Modifier, data: List<DailyProduction>) { // Alterado para receber a nova lista
+fun ProductionChart(modifier: Modifier = Modifier, data: List<DailyProduction>) {
     val textMeasurer = rememberTextMeasurer()
     val primaryColor = MaterialTheme.colorScheme.primary
     val onSurfaceColor = MaterialTheme.colorScheme.onSurface
@@ -301,42 +272,66 @@ fun ProductionChart(modifier: Modifier = Modifier, data: List<DailyProduction>) 
     }
 
     Canvas(modifier = modifier) {
-        val paddingBottom = 40.dp.toPx() // Espaço para a legenda
-        val chartHeight = size.height - paddingBottom
+        val paddingBottom = 40.dp.toPx()
+        val paddingTop = 20.dp.toPx()
+        val chartHeight = size.height - paddingBottom - paddingTop
 
         val eggData = data.map { it.eggs }
         val maxValue = eggData.maxOrNull() ?: 0
-        val minValue = eggData.minOrNull() ?: 0
+        val minValue = 0 // Começa sempre do zero para contexto
         val valueRange = (maxValue - minValue).toFloat().coerceAtLeast(1f)
-        val path = Path()
 
-        // Desenha o eixo X
-        drawLine(
-            color = onSurfaceColor.copy(alpha = 0.5f),
-            start = Offset(0f, chartHeight),
-            end = Offset(size.width, chartHeight),
-            strokeWidth = 2f
-        )
+        val linePath = Path()
+        val fillPath = Path()
 
-        data.forEachIndexed { index, dailyProd ->
-            val x = size.width * (index.toFloat() / (data.size - 1).toFloat().coerceAtLeast(1f))
-            val y = chartHeight * (1 - ((dailyProd.eggs - minValue) / valueRange))
-
-            if (index == 0) {
-                path.moveTo(x, y)
-            } else {
-                path.lineTo(x, y)
-            }
-            drawCircle(color = primaryColor, radius = 10f, center = Offset(x, y))
+        // Desenha a grelha de fundo
+        val gridLines = 5
+        (0..gridLines).forEach { i ->
+            val y = chartHeight * (i.toFloat() / gridLines) + paddingTop
+            drawLine(
+                color = onSurfaceColor.copy(alpha = 0.1f),
+                start = Offset(0f, y),
+                end = Offset(size.width, y),
+                strokeWidth = 1f
+            )
         }
 
-        drawPath(path = path, color = primaryColor, style = Stroke(width = 5f))
-
         data.forEachIndexed { index, dailyProd ->
             val x = size.width * (index.toFloat() / (data.size - 1).toFloat().coerceAtLeast(1f))
-            val y = chartHeight * (1 - ((dailyProd.eggs - minValue) / valueRange))
+            val y = chartHeight * (1 - ((dailyProd.eggs - minValue) / valueRange)) + paddingTop
 
-            // Desenha o valor dos ovos
+            if (index == 0) {
+                linePath.moveTo(x, y)
+                fillPath.moveTo(x, size.height - paddingBottom)
+                fillPath.lineTo(x, y)
+            } else {
+                linePath.lineTo(x, y)
+                fillPath.lineTo(x, y)
+            }
+        }
+        fillPath.lineTo(size.width, size.height - paddingBottom)
+        fillPath.close()
+
+        // Desenha o preenchimento com gradiente
+        drawPath(
+            path = fillPath,
+            brush = Brush.verticalGradient(
+                colors = listOf(primaryColor.copy(alpha = 0.3f), Color.Transparent),
+                endY = chartHeight + paddingTop
+            )
+        )
+
+        // Desenha a linha do gráfico
+        drawPath(path = linePath, color = primaryColor, style = Stroke(width = 6f))
+
+        // Desenha os pontos e as legendas
+        data.forEachIndexed { index, dailyProd ->
+            val x = size.width * (index.toFloat() / (data.size - 1).toFloat().coerceAtLeast(1f))
+            val y = chartHeight * (1 - ((dailyProd.eggs - minValue) / valueRange)) + paddingTop
+
+            drawCircle(color = primaryColor, radius = 10f, center = Offset(x, y))
+            drawCircle(color = Color.White, radius = 5f, center = Offset(x, y))
+
             val eggText = dailyProd.eggs.toString()
             val measuredEggText = textMeasurer.measure(eggText, style = TextStyle(color = onSurfaceColor, fontSize = 12.sp, fontWeight = FontWeight.Bold))
             drawText(
@@ -346,7 +341,6 @@ fun ProductionChart(modifier: Modifier = Modifier, data: List<DailyProduction>) 
                 topLeft = Offset(x - (measuredEggText.size.width / 2), y - measuredEggText.size.height - 20f)
             )
 
-            // Desenha a data na legenda
             dailyProd.timestamp?.let {
                 val dateText = dateFormat.format(it)
                 val measuredDateText = textMeasurer.measure(dateText, style = TextStyle(color = onSurfaceColor, fontSize = 10.sp))
@@ -354,7 +348,7 @@ fun ProductionChart(modifier: Modifier = Modifier, data: List<DailyProduction>) 
                     textMeasurer = textMeasurer,
                     text = dateText,
                     style = TextStyle(color = onSurfaceColor, fontSize = 10.sp),
-                    topLeft = Offset(x - (measuredDateText.size.width / 2), chartHeight + 10f)
+                    topLeft = Offset(x - (measuredDateText.size.width / 2), size.height - paddingBottom + 10f)
                 )
             }
         }

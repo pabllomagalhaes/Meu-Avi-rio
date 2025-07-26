@@ -1,80 +1,46 @@
 package com.example.meuaviario
 
 import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Store
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
-import com.example.meuaviario.ui.theme.MeuAviarioTheme
-import java.text.NumberFormat
 import java.text.SimpleDateFormat
-import java.util.Locale
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SaleHistoryScreen(
+fun ProductionScreen(
     navController: NavController,
-    viewModel: SaleHistoryViewModel = viewModel()
+    viewModel: ProductionViewModel = viewModel()
 ) {
-    val sales = viewModel.sales.value
-    var showEditDialog by remember { mutableStateOf(false) }
-    var saleToEdit by remember { mutableStateOf<Sale?>(null) }
+    val dailyRecords = viewModel.dailyRecords.value
+    var showDialog by remember { mutableStateOf(false) }
+    var recordToEdit by remember { mutableStateOf<DailyProduction?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var saleToDelete by remember { mutableStateOf<Sale?>(null) }
+    var recordToDelete by remember { mutableStateOf<DailyProduction?>(null) }
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Histórico de Vendas") })
+            TopAppBar(title = { Text("Histórico de Produção") })
         },
         bottomBar = {
             NavigationBar {
@@ -85,8 +51,8 @@ fun SaleHistoryScreen(
                     label = { Text("Painel") }
                 )
                 NavigationBarItem(
-                    selected = false,
-                    onClick = { navController.navigate("production") { popUpTo("home") { inclusive = true } } },
+                    selected = true,
+                    onClick = { /* Já estamos aqui */ },
                     icon = { Icon(Icons.Outlined.EditNote, contentDescription = "Produção") },
                     label = { Text("Produção") }
                 )
@@ -103,26 +69,29 @@ fun SaleHistoryScreen(
                     label = { Text("Despesas") }
                 )
                 NavigationBarItem(
-                    selected = true,
-                    onClick = { /* Já estamos aqui */ },
+                    selected = false,
+                    onClick = { navController.navigate("sale_history") { popUpTo("home") { inclusive = true } } },
                     icon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = "Vendas") },
                     label = { Text("Vendas") }
                 )
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate("sale") }) {
-                Icon(Icons.Default.Add, contentDescription = "Registar Venda")
+            FloatingActionButton(onClick = {
+                recordToEdit = null // Garante que é um novo registo
+                showDialog = true
+            }) {
+                Icon(Icons.Default.Add, contentDescription = "Adicionar Registo")
             }
         },
         content = { paddingValues ->
-            if (sales.isEmpty()) {
+            if (dailyRecords.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Nenhuma venda registada.\nClique no botão '+' para adicionar a sua primeira.",
+                        text = "Nenhum registo de produção encontrado.\nClique no botão '+' para adicionar o de hoje.",
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -134,15 +103,15 @@ fun SaleHistoryScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(sales) { sale ->
-                        SaleItem(
-                            sale = sale,
+                    items(dailyRecords) { record ->
+                        ProductionItem(
+                            record = record,
                             onEditClick = {
-                                saleToEdit = it
-                                showEditDialog = true
+                                recordToEdit = it
+                                showDialog = true
                             },
                             onDeleteClick = {
-                                saleToDelete = it
+                                recordToDelete = it
                                 showDeleteDialog = true
                             }
                         )
@@ -150,27 +119,28 @@ fun SaleHistoryScreen(
                 }
             }
 
-            if (showEditDialog) {
-                AddOrEditSaleDialog(
-                    saleToEdit = saleToEdit,
-                    onDismiss = { showEditDialog = false },
-                    onConfirm = { quantity, price ->
-                        saleToEdit?.let {
-                            viewModel.updateSale(it.id, quantity, price,
-                                onSuccess = { showEditDialog = false },
-                                onError = { /* Tratar erro */ }
-                            )
-                        }
+            if (showDialog) {
+                AddOrEditProductionDialog(
+                    recordToEdit = recordToEdit,
+                    onDismiss = { showDialog = false },
+                    onConfirm = { eggCount, feedAmount ->
+                        viewModel.saveDailyRecord(
+                            recordId = recordToEdit?.id,
+                            eggCount = eggCount,
+                            feedAmount = feedAmount,
+                            onSuccess = { showDialog = false },
+                            onError = { /* Tratar erro */ }
+                        )
                     }
                 )
             }
 
             if (showDeleteDialog) {
-                DeleteSaleConfirmDialog(
+                DeleteProductionConfirmDialog(
                     onDismiss = { showDeleteDialog = false },
                     onConfirm = {
-                        saleToDelete?.let {
-                            viewModel.deleteSale(it.id,
+                        recordToDelete?.let {
+                            viewModel.deleteProductionRecord(it.id,
                                 onSuccess = { showDeleteDialog = false },
                                 onError = { /* Tratar erro */ }
                             )
@@ -183,8 +153,11 @@ fun SaleHistoryScreen(
 }
 
 @Composable
-fun SaleItem(sale: Sale, onEditClick: (Sale) -> Unit, onDeleteClick: (Sale) -> Unit) {
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("pt", "BR")) }
+fun ProductionItem(
+    record: DailyProduction,
+    onEditClick: (DailyProduction) -> Unit,
+    onDeleteClick: (DailyProduction) -> Unit
+) {
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
     Card(
@@ -195,65 +168,58 @@ fun SaleItem(sale: Sale, onEditClick: (Sale) -> Unit, onDeleteClick: (Sale) -> U
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "${sale.quantityInDozens} dúzias vendidas",
+                    text = record.timestamp?.let { dateFormat.format(it) } ?: "Data indefinida",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Preço unitário: ${currencyFormat.format(sale.pricePerDozen)}",
+                    text = "Ovos Coletados: ${record.eggs}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                sale.timestamp?.let {
-                    Text(
-                        text = dateFormat.format(it),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = "Ração Consumida: ${record.feedConsumed} kg",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            Text(
-                text = currencyFormat.format(sale.totalAmount),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            IconButton(onClick = { onEditClick(sale) }) {
-                Icon(Icons.Default.Edit, "Editar Venda")
+            IconButton(onClick = { onEditClick(record) }) {
+                Icon(Icons.Default.Edit, "Editar Registo")
             }
-            IconButton(onClick = { onDeleteClick(sale) }) {
-                Icon(Icons.Default.Delete, "Eliminar Venda")
+            IconButton(onClick = { onDeleteClick(record) }) {
+                Icon(Icons.Default.Delete, "Eliminar Registo")
             }
         }
     }
 }
 
 @Composable
-fun AddOrEditSaleDialog(
-    saleToEdit: Sale?,
+fun AddOrEditProductionDialog(
+    recordToEdit: DailyProduction?,
     onDismiss: () -> Unit,
     onConfirm: (Int, Double) -> Unit
 ) {
-    var quantity by remember { mutableStateOf(saleToEdit?.quantityInDozens?.toString() ?: "") }
-    var price by remember { mutableStateOf(saleToEdit?.pricePerDozen?.toString() ?: "") }
+    var eggCount by remember { mutableStateOf(recordToEdit?.eggs?.toString() ?: "") }
+    var feedAmount by remember { mutableStateOf(recordToEdit?.feedConsumed?.toString() ?: "") }
     val context = LocalContext.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (saleToEdit == null) "Registar Venda" else "Editar Venda") },
+        title = { Text(if (recordToEdit == null) "Adicionar Registo Diário" else "Editar Registo de ${recordToEdit?.timestamp?.let { SimpleDateFormat("dd/MM", Locale.getDefault()).format(it) }}") },
         text = {
             Column {
                 OutlinedTextField(
-                    value = quantity,
-                    onValueChange = { quantity = it.filter { c -> c.isDigit() } },
-                    label = { Text("Quantidade (dúzias)") },
+                    value = eggCount,
+                    onValueChange = { eggCount = it.filter { c -> c.isDigit() } },
+                    label = { Text("Ovos Coletados") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
-                    value = price,
-                    onValueChange = { price = it },
-                    label = { Text("Preço por dúzia (R$)") },
+                    value = feedAmount,
+                    onValueChange = { feedAmount = it },
+                    label = { Text("Ração Consumida (kg)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
             }
@@ -261,10 +227,10 @@ fun AddOrEditSaleDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val quantityInt = quantity.toIntOrNull()
-                    val priceDouble = price.replace(',', '.').toDoubleOrNull()
-                    if (quantityInt != null && priceDouble != null) {
-                        onConfirm(quantityInt, priceDouble)
+                    val eggInt = eggCount.toIntOrNull()
+                    val feedDouble = feedAmount.replace(',', '.').toDoubleOrNull()
+                    if (eggInt != null && feedDouble != null) {
+                        onConfirm(eggInt, feedDouble)
                     } else {
                         Toast.makeText(context, "Preencha todos os campos.", Toast.LENGTH_SHORT).show()
                     }
@@ -282,11 +248,11 @@ fun AddOrEditSaleDialog(
 }
 
 @Composable
-fun DeleteSaleConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+fun DeleteProductionConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Confirmar Eliminação") },
-        text = { Text("Tem a certeza de que deseja eliminar este registo de venda? Esta ação não pode ser desfeita.") },
+        text = { Text("Tem a certeza de que deseja eliminar este registo de produção? Esta ação não pode ser desfeita.") },
         confirmButton = {
             Button(
                 onClick = onConfirm,
@@ -301,12 +267,4 @@ fun DeleteSaleConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             }
         }
     )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun SaleHistoryScreenPreview() {
-    MeuAviarioTheme {
-        SaleHistoryScreen(navController = rememberNavController())
-    }
 }

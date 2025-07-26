@@ -46,6 +46,7 @@ class MainActivity : ComponentActivity() {
                     composable("sale") { SaleScreen(navController = navController) }
                     composable("batch") { BatchScreen(navController = navController) }
                     composable("sale_history") { SaleHistoryScreen(navController = navController) }
+                    composable("production") { ProductionScreen(navController = navController) }
                 }
             }
         }
